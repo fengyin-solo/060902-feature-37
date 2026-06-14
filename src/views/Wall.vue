@@ -180,10 +180,66 @@
         <div class="modal-body">
           <p class="modal-desc">把这条短信匿名挂到广场，让别人猜猜上下文是什么。</p>
           
-          <div class="preview-exhibit">
-            <div class="message-exhibit received">
-              <div class="exhibit-body">
-                {{ selectedMessageToHang?.body }}
+          <div class="preview-section">
+            <div class="preview-label">预览效果：</div>
+            <div class="post-card preview-card">
+              <div class="post-header">
+                <span class="post-date">刚刚</span>
+                <span 
+                  v-if="previewPost?.isSent" 
+                  class="post-type sent"
+                >📤 发出的短信</span>
+                <span 
+                  v-else 
+                  class="post-type received"
+                >📥 收到的短信</span>
+              </div>
+
+              <div class="post-message">
+                "{{ previewPost?.message }}"
+              </div>
+
+              <div class="post-tags" v-if="previewPost?.tags && previewPost.tags.length > 0">
+                <span 
+                  v-for="tag in previewPost?.tags" 
+                  :key="tag.type"
+                  class="tag"
+                  :class="'tag-' + tag.type"
+                >
+                  {{ tag.text }}
+                </span>
+              </div>
+
+              <div class="post-meta" v-if="!previewPost?.anonymous && previewPost?.originalConversation">
+                <span>来自: {{ previewPost?.originalConversation }}</span>
+              </div>
+
+              <div class="post-stats">
+                <span>💭 0 个猜测</span>
+                <span v-if="previewPost?.context">🔓 已揭晓</span>
+                <span v-else>🔒 待揭晓</span>
+              </div>
+
+              <div class="post-actions">
+                <button class="btn btn-primary" disabled>我来猜猜 →</button>
+                <button 
+                  v-if="!previewPost?.context"
+                  class="btn btn-secondary"
+                  disabled
+                >
+                  揭晓答案
+                </button>
+              </div>
+
+              <div v-if="previewPost?.context" class="context-reveal">
+                <div class="context-section" v-if="previewPost?.context.prev">
+                  <label>👆 上一条：</label>
+                  <p>{{ previewPost?.context.prev }}</p>
+                </div>
+                <div class="context-section" v-if="previewPost?.context.next">
+                  <label>👇 下一条：</label>
+                  <p>{{ previewPost?.context.next }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -225,6 +281,21 @@ const selectedLetterToHang = ref(null);
 const hangUpOptions = ref({
  hideContext: true,
  anonymous: true
+});
+
+const previewPost = computed(() => {
+  if (!selectedMessageToHang.value || !selectedLetterToHang.value) return null;
+  return {
+    message: selectedMessageToHang.value.body,
+    isSent: selectedMessageToHang.value.isSent,
+    context: hangUpOptions.value.hideContext ? null : {
+      prev: getContextMessage(selectedLetterToHang.value, selectedMessageToHang.value, -1),
+      next: getContextMessage(selectedLetterToHang.value, selectedMessageToHang.value, 1)
+    },
+    tags: selectedMessageToHang.value.highlights || [],
+    anonymous: hangUpOptions.value.anonymous,
+    originalConversation: hangUpOptions.value.anonymous ? null : selectedLetterToHang.value.conversation.name
+  };
 });
 const messageRefs = ref({});
 const displayModes = [
@@ -603,11 +674,130 @@ onMounted(() => {
   border: none;
 }
 
-.preview-exhibit {
+.preview-section {
   margin: 1.5rem 0;
+}
+
+.preview-label {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+}
+
+.preview-card {
+  transform: scale(0.95);
+  transform-origin: top left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.post-card {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem;
+  transition: all 0.3s;
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.post-date {
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+.post-type {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+}
+
+.post-type.sent {
+  background: #ffe5e5;
+  color: var(--love-red);
+}
+
+.post-type.received {
+  background: #f3e5f5;
+  color: var(--accent);
+}
+
+.post-message {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--text-dark);
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.post-tags {
+  margin-bottom: 1rem;
+}
+
+.post-meta {
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.post-stats {
+  display: flex;
+  gap: 1.5rem;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.post-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.post-actions .btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.context-reveal {
+  margin-top: 1rem;
   padding: 1rem;
   background: var(--bg-light);
-  border-radius: 12px;
+  border-radius: 8px;
+  border-left: 3px solid var(--love-pink);
+}
+
+.context-section {
+  margin-bottom: 0.75rem;
+}
+
+.context-section:last-child {
+  margin-bottom: 0;
+}
+
+.context-section label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-bottom: 0.25rem;
+}
+
+.context-section p {
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  margin: 0;
 }
 
 .conversation-modal {
